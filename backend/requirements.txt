@@ -1,0 +1,8 @@
+# ingestion
+pymupdf>=1.24
+psycopg[binary,pool]>=3.2
+pgvector>=0.3
+numpy>=1.26
+pytest>=8
+# embedder (moves to its own branch/service later; see embedder/requirements.txt)
+-r embedder/requirements.txt

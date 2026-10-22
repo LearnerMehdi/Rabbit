@@ -1,0 +1,26 @@
+# Same compose project as ../docker-compose.yml ("rabbit"), so either file
+# manages the one orange-rabbit-db container and its pgdata volume.
+name: rabbit
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: orange-rabbit-db
+    environment:
+      POSTGRES_USER: rabbit
+      POSTGRES_PASSWORD: rabbit
+      POSTGRES_DB: orange_rabbit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Applied only when the volume is first created; use `cd backend && python -m ingest init-db` otherwise.
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rabbit -d orange_rabbit"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:

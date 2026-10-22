@@ -1,0 +1,65 @@
+/* App layout. Component looks come from ds.css (the design system's bundle.css);
+   this file only places them, using the same tokens. */
+
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+body.is-resizing { cursor: col-resize; user-select: none; }
+
+/* --- Library --- */
+.app-library { display: flex; flex-direction: column; height: 100%; }
+.app-library__header { display: flex; align-items: center; gap: var(--space-3); height: var(--header-height); padding: 0 var(--space-8); border-bottom: 1px solid var(--border); flex: none; }
+.app-name { font-size: 16px; line-height: 24px; font-weight: 600; margin-right: var(--space-4); white-space: nowrap; }
+.app-library__search { flex: 1; max-width: 480px; }
+.app-library__header > .or-btn--primary { margin-left: auto; }
+.app-library__main { flex: 1; overflow: auto; padding: var(--space-8); }
+.app-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--card-width)); gap: var(--space-6); }
+.app-cover { width: 136px; height: 192px; object-fit: cover; object-position: top; background: var(--bg); box-shadow: var(--shadow-page); display: block; }
+.app-rename { height: 28px; padding: 0 var(--space-2); font-weight: 600; }
+.app-small-link { font-size: 12px; line-height: 16px; }
+
+.app-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-8); text-align: center; height: 100%; box-sizing: border-box; }
+.app-empty p { margin: 0; }
+.app-empty__title { font-size: 16px; line-height: 24px; font-weight: 600; }
+
+/* --- Overlays --- */
+.app-scrim { position: fixed; inset: 0; z-index: 50; }
+.app-scrim__inner { position: absolute; inset: 0; }
+.app-menu { position: fixed; z-index: 60; }
+
+/* --- Reader --- */
+.app-reader { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+.app-reader .or-toolbar { flex: none; }
+.app-back { padding: 0 var(--space-2); }
+.app-reader__body { flex: 1; display: flex; min-height: 0; }
+.app-thumbs { flex: none; overflow-y: auto; height: 100%; box-sizing: border-box; }
+.app-thumb__page { position: relative; padding: 0; overflow: hidden; }
+.app-reader__pages { flex: 1; min-width: 0; position: relative; background: var(--bg-subtle); }
+.app-pages { position: absolute; inset: 0; overflow: auto; outline: none; }
+.app-pages__inner { position: relative; margin: 0 auto; }
+.app-page { position: absolute; left: 50%; transform: translateX(-50%); background: var(--bg); box-shadow: var(--shadow-page); }
+.app-page__canvas { display: block; width: 100%; height: 100%; transition: opacity 120ms; }
+.app-reader__chat { position: relative; flex: none; display: flex; border-left: 1px solid var(--border); background: var(--bg); }
+.app-resizer { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 2; }
+.app-resizer:hover, .app-resizer:focus-visible { background: var(--accent-line); opacity: .5; outline: none; }
+.app-statusbar { flex: none; display: flex; align-items: center; justify-content: center; height: var(--statusbar-height); border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+.app-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-1); }
+.app-search__field { flex: 1; max-width: 360px; }
+.app-search__field .or-input { height: 32px; }
+.app-search__field .or-icon { top: 8px; }
+.app-search__count { min-width: 72px; text-align: right; padding-right: var(--space-1); font-variant-numeric: tabular-nums; }
+
+/* --- Chat --- */
+.app-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.app-chat__list { flex: 1; overflow-y: auto; padding: var(--space-4); }
+.app-chat__composer { flex: none; padding: 0 var(--space-4) var(--space-4); }
+.app-chat .or-composer__note { flex-wrap: wrap; }
+
+/* --- Dev panel (mock backend controls; not product UI) --- */
+.app-dev__toggle { position: fixed; left: var(--space-3); bottom: var(--space-3); z-index: 40; cursor: pointer; opacity: .8; }
+.app-dev__toggle:hover { opacity: 1; }
+.app-dev { position: fixed; left: var(--space-3); bottom: var(--space-3); z-index: 40; width: 280px; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--bg); border: 1px dashed var(--border-control); border-radius: var(--radius); box-shadow: var(--shadow-menu); }
+.app-dev p { margin: 0; }
+.app-dev__head { display: flex; align-items: center; justify-content: space-between; margin: -4px -8px -4px 0; }
+.app-dev__check { display: flex; align-items: center; gap: var(--space-2); }
+.app-dev select.or-input { padding-right: var(--space-2); }

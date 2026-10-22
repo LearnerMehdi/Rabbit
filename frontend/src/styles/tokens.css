@@ -1,0 +1,46 @@
+/* Orange Reader — generated from design/tokens.json by scripts/tokens.mjs; do not edit */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f8;
+  --border: #e5e7eb;
+  --border-control: #878e99;
+  --text: #1f2328;
+  --text-muted: #6b7280;
+  --text-disabled: #9ca3af;
+  --accent: #f57c00;
+  --accent-hover: #e06f00;
+  --accent-soft: #fff3e0;
+  --accent-text: #b35600;
+  --accent-line: var(--accent-hover);
+  --on-accent: var(--text);
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --success-strong: #15803d;
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+  --danger-soft: #fee2e2;
+  --on-danger: #ffffff;
+  --overlay: rgba(31, 35, 40, 0.4);
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --radius-pill: 999px;
+  --shadow-page: 0 1px 3px rgba(31, 35, 40, 0.1);
+  --shadow-menu: 0 4px 12px rgba(31, 35, 40, 0.08), 0 1px 2px rgba(31, 35, 40, 0.06);
+  --shadow-dialog: 0 16px 40px rgba(31, 35, 40, 0.16);
+  --header-height: 64px;
+  --topbar-height: 48px;
+  --statusbar-height: 28px;
+  --sidebar-width: 220px;
+  --chat-panel-width: 380px;
+  --chat-panel-min: 320px;
+  --chat-panel-max: 560px;
+  --card-width: 200px;
+}

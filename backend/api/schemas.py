@@ -1,7 +1,8 @@
-"""Database rows -> the frontend's `Book` (frontend/src/api/types.ts)."""
+"""Database rows and answers -> the frontend's `Book` and `Source` (frontend/src/api/types.ts)."""
 from datetime import datetime
 from pathlib import Path
 
+from chat import Source
 from ingest.library import COVER_NAME
 
 from .jobs import Progress
@@ -37,3 +38,14 @@ def book_json(row: dict, progress: Progress | None = None) -> dict:
         "cover": f"/api/books/{row['id']}/cover" if has_cover else None,
     }
 
+
+def source_json(s: Source) -> dict:
+    e = s.excerpt
+    return {
+        "n": s.n,
+        "pageStart": e.page_start,
+        "pageEnd": e.page_end,
+        "similarity": round(1 - e.distance, 4),
+        "text": e.content,
+        "highlights": [{"page": h.page, "rects": [[round(v, 5) for v in r] for r in h.rects]} for h in s.highlights],
+    }

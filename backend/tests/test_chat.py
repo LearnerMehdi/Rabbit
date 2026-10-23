@@ -13,7 +13,9 @@ from chat import (
     BookNotReadyError,
     ChatUnavailableError,
     answer_question,
+    PageWords,
     build_messages,
+    locate,
     search_chunks,
 )
 from embedder import get_embedder
@@ -86,7 +88,7 @@ def test_search_returns_k_closest_chunks_in_order(book, db_url):
 def test_messages_are_system_prompt_plus_this_question_and_chunks(book, db_url, stub_llm):
     first = answer_question(book, QUESTION, db_url=db_url, settings=WITH_KEY)
     second = answer_question(book, "Who built the gauge?", db_url=db_url, settings=WITH_KEY)
-    assert (first, second) == ("stub answer 1", "stub answer 2")
+    assert (first.text, second.text) == ("stub answer 1", "stub answer 2")
 
     # every call is isolated: [system, user], same system prompt, nothing from earlier calls
     for messages in stub_llm:
@@ -124,7 +126,12 @@ def test_ask_endpoint(book, db_url, tmp_path, stub_llm):
     with TestClient(app) as client:
         assert client.get("/api/chat/availability").json() == {"availability": "available"}
         r = client.post(f"/api/books/{book}/ask", json={"question": f"  {QUESTION}  "})
-        assert r.json() == {"answer": "stub answer 1"}
+        body = r.json()
+        assert body["answer"] == "stub answer 1"
+        assert [s["n"] for s in body["sources"]] == list(range(1, WITH_KEY.chat_top_k + 1))
+        top = body["sources"][0]
+        assert "brass gauge" in top["text"] and 0 < top["similarity"] <= 1
+        assert FACT_PAGE in [h["page"] for h in top["highlights"]]
         assert stub_llm[0][1]["content"].endswith(f"Question: {QUESTION}")
 
     no_key = create_app(
@@ -148,3 +155,29 @@ def test_llm_failure_is_reported_not_raised(book, db_url, tmp_path, monkeypatch)
         r = client.post(f"/api/books/{book}/ask", json={"question": QUESTION})
         assert (r.status_code, r.json()) == (502, {"code": "failed", "message": "Couldn't get an answer. Try again."})
 
+
+def test_sources_highlight_the_excerpt_on_its_page(book, db_url, stub_llm):
+    """Sources are for the UI: located in the PDF, never shown to the LLM."""
+    answer = answer_question(book, QUESTION, db_url=db_url, settings=WITH_KEY)
+    assert len(answer.sources) == WITH_KEY.chat_top_k
+    for s in answer.sources:
+        assert s.highlights, f"excerpt {s.n} not found on p. {s.excerpt.page_start}-{s.excerpt.page_end}"
+        for h in s.highlights:
+            assert s.excerpt.page_start <= h.page <= s.excerpt.page_end
+            for x0, y0, x1, y1 in h.rects:
+                assert 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1
+    # the fact opens its page, so the top excerpt is highlighted from near the top margin there
+    [top] = [h for h in answer.sources[0].highlights if h.page == FACT_PAGE]
+    assert min(r[1] for r in top.rects) < 0.2
+    user = stub_llm[0][1]["content"]
+    assert "highlight" not in user.lower() and "[1]" not in user
+
+
+def test_locate_falls_back_to_word_runs(tmp_path):
+    """Text that isn't verbatim in the PDF still lights up its matching runs of words."""
+    pdf = make_pdf.write_pages(tmp_path / "f.pdf", [make_pdf._wrap(FACT, make_pdf.random.Random(0))])
+    with PageWords(pdf) as pages:
+        altered = FACT.replace("brass gauge", "bronze meter")
+        [h] = locate(pages, 1, 1, altered)
+        assert h.page == 1 and h.rects
+        assert locate(pages, 1, 1, "completely unrelated words that are nowhere here") == []

@@ -4,6 +4,8 @@ Every call is isolated: the same system prompt, plus a user message built from t
 question and the chunks retrieved for it. Nothing is stored and no history is sent.
 """
 import logging
+from dataclasses import dataclass
+from pathlib import Path
 from uuid import UUID
 
 import httpx
@@ -12,6 +14,7 @@ import config
 from embedder import Embedder
 from ingest import get_book
 
+from .locate import Highlight, PageWords, locate
 from .retrieve import Excerpt, search_chunks
 
 log = logging.getLogger(__name__)
@@ -21,6 +24,22 @@ SYSTEM_PROMPT = (
     "the question. If they don't contain the answer, say that this part of the book doesn't "
     "cover it. Answer plainly and concisely, in the language of the question."
 )
+
+
+@dataclass
+class Source:
+    """One retrieved excerpt and where it is in the book. Built for the UI only: the LLM
+    never sees sources, so a future conversation history needs just `Answer.text`."""
+
+    n: int  # 1-based, closest first
+    excerpt: Excerpt
+    highlights: list[Highlight]
+
+
+@dataclass
+class Answer:
+    text: str
+    sources: list[Source]
 
 
 class ChatUnavailableError(Exception):
@@ -72,6 +91,17 @@ def _post_completion(messages: list[dict], settings: config.Settings) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def find_sources(pdf_path: Path, excerpts: list[Excerpt]) -> list[Source]:
+    """Number the excerpts (closest first) and locate each on its pages."""
+    try:
+        with PageWords(pdf_path) as pages:
+            spots = [locate(pages, e.page_start, e.page_end, e.content) for e in excerpts]
+    except Exception as e:  # highlights are a convenience; the answer still stands
+        log.warning("couldn't locate excerpts in %s: %s", pdf_path, e)
+        spots = [[] for _ in excerpts]
+    return [Source(n, e, h) for n, (e, h) in enumerate(zip(excerpts, spots), start=1)]
+
+
 def answer_question(
     book_id: UUID,
     question: str,
@@ -79,10 +109,11 @@ def answer_question(
     embedder: Embedder | None = None,
     db_url: str | None = None,
     settings: config.Settings = config.SETTINGS,
-) -> str:
+) -> Answer:
     if not chat_available(settings):
         raise ChatUnavailableError()
-    if get_book(book_id, db_url=db_url)["status"] != "ready":
+    book = get_book(book_id, db_url=db_url)
+    if book["status"] != "ready":
         raise BookNotReadyError()
     excerpts = search_chunks(book_id, question, settings.chat_top_k, embedder=embedder, db_url=db_url)
     try:
@@ -92,4 +123,4 @@ def answer_question(
         raise AnswerFailedError() from e
     if not answer:
         raise AnswerFailedError()
-    return answer
+    return Answer(answer, find_sources(Path(book["file_path"]), excerpts))

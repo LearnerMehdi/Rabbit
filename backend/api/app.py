@@ -26,7 +26,7 @@ from ingest.library import COVER_NAME
 
 from .events import EventBus
 from .jobs import Jobs
-from .schemas import book_json
+from .schemas import book_json, source_json
 
 log = logging.getLogger(__name__)
 
@@ -162,7 +162,8 @@ def create_app(
 
     @app.post("/api/books/{book_id}/ask")
     def ask(book_id: UUID, body: Question):
-        return {"answer": answer_question(book_id, body.question.strip(), db_url=db_url, settings=settings)}
+        answer = answer_question(book_id, body.question.strip(), db_url=db_url, settings=settings)
+        return {"answer": answer.text, "sources": [source_json(s) for s in answer.sources]}
 
     @app.get("/api/events")
     async def events(request: Request):

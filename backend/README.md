@@ -1,10 +1,11 @@
 # Orange Reader — backend (ingestion)
 
-PDF → text → chunks → embeddings → Postgres/pgvector. Text only for now; each step
-is one replaceable function in `ingest/`. No API layer yet.
+PDF → text → chunks → embeddings → Postgres/pgvector, an HTTP API for the frontend, and
+questions answered from a book (top-k chunks + one LLM call). Each ingestion step is one
+replaceable function in `ingest/`.
 
 ```
-config.py            env-driven settings (RABBIT_*)
+config.py            settings from ../config.yaml, overridden by RABBIT_* env vars; secrets from ../../.env
 db.py                connections, schema apply, test/stress DB creation
 schema.sql           books + chunks tables (idempotent)
 embedder/            embedding boundary — standalone, moves to its own branch/service
@@ -17,27 +18,46 @@ ingest/
   pipeline.py        ingest_book(book_id, pdf_path, on_progress)
   library.py         add_book / reindex_book / delete_book / list_books
   __main__.py        CLI
+api/
+  app.py             FastAPI app: /api/* (frontend LibraryApi) + the built UI at /
+  jobs.py            background (re)indexing worker, in-memory progress
+  events.py          server-sent events: progress, library changes
+  schemas.py         DB row -> frontend Book
+  __main__.py        python -m api (host/port from config.yaml)
+chat/
+  retrieve.py        search_chunks: embed the question, ORDER BY cosine distance, LIMIT k
+  answer.py          answer_question: shared system prompt + this question + its chunks, one LLM call
 tests/               pytest (unit + integration)
 stress/              synthetic PDF generator + stress runner
 ```
 
-## Setup
+## Run
+
+The whole app starts with one command from the project root (`Rabbit/Rabbit/`):
 
 ```bash
-docker compose -f ../docker-compose.yml up -d   # Postgres 16 + pgvector (compose file lives at the project root)
-uv pip install -r requirements.txt              # into ../../.venv
-python -m ingest init-db                        # apply schema.sql (safe to repeat)
+./start.sh        # database, schema, deps, UI build, then http://127.0.0.1:8000
 ```
 
-Run everything from this `backend/` directory with `../../.venv/bin/python` (or an activated venv).
+Settings live in `../config.yaml`; the LLM key in `../../.env` (`OPENROUTER_API_KEY`; the LLM is OpenRouter, `openai/gpt-4o`).
 
-## CLI
+## Questions
+
+Each question is answered on its own: the question is embedded (`embed_queries`), the
+`chat.top_k` closest chunks of that book are taken by cosine distance, and one request
+goes to the LLM with the shared system prompt, those chunks and the question. There is
+no re-ranking, query rewriting or routing, and no history: nothing from earlier questions
+is sent or stored.
+
+## CLI (maintenance)
+
+Works on the same database and data folder as the app (run from this directory):
 
 ```bash
-python -m ingest add path/to/book.pdf --title "Title" [--author "Name"]
-python -m ingest reindex <book_id>
-python -m ingest list
-python -m ingest delete <book_id>      # chunks cascade
+../../.venv/bin/python -m ingest add path/to/book.pdf --title "Title" [--author "Name"]
+../../.venv/bin/python -m ingest reindex <book_id>
+../../.venv/bin/python -m ingest list
+../../.venv/bin/python -m ingest delete <book_id>      # chunks cascade
 ```
 
 ## Embedder boundary
@@ -54,6 +74,9 @@ client registered as `RABBIT_EMBED_BACKEND=http`. The tokenizer stays local (no 
 python -m pytest                     # all (integration uses DB orange_rabbit_test + GPU)
 python -m pytest -m "not integration"
 ```
+
+Tests never call the real LLM: an autouse fixture in `tests/conftest.py` fails any test
+that reaches `chat.answer._post_completion`; chat tests replace it with a stub.
 
 ## Stress tests
 

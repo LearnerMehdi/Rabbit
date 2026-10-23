@@ -27,3 +27,9 @@ CREATE TABLE IF NOT EXISTS chunks (
 );
 
 CREATE INDEX IF NOT EXISTS chunks_book_idx ON chunks (book_id);
+
+-- Fields the reader UI needs (added after the first release; safe to re-run).
+ALTER TABLE books ADD COLUMN IF NOT EXISTS file_name      TEXT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS file_size      BIGINT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS last_page      INT NOT NULL DEFAULT 1;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ;

@@ -3,7 +3,18 @@ from .chunk import chunk_pages
 from .clean import clean_text
 from .embed import embed_chunks
 from .extract import extract_pages
-from .library import add_book, delete_book, list_books, reindex_book
+from .library import (
+    add_book,
+    create_book,
+    delete_book,
+    get_book,
+    list_books,
+    mark_indexing,
+    mark_opened,
+    reindex_book,
+    set_last_page,
+    update_book,
+)
 from .pipeline import ingest_book
 from .save import save_chunks
 from .types import (
@@ -13,6 +24,7 @@ from .types import (
     IngestError,
     IngestResult,
     NoTextLayerError,
+    NotPdfError,
     PageList,
     PageText,
     UnreadablePDFError,

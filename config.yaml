@@ -1,0 +1,35 @@
+# Orange Reader settings. Secrets (API keys) stay in ../.env.
+# Any value can be overridden by its RABBIT_* environment variable (see backend/config.py).
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+database:
+  # must match the credentials in docker-compose.yml
+  url: postgresql://rabbit:rabbit@localhost:5432/orange_rabbit
+
+storage:
+  data_dir: backend/data          # relative to this file; PDFs and covers go in <data_dir>/books/
+
+embedder:
+  backend: local                  # in-process sentence-transformers
+  model: Qwen/Qwen3-Embedding-0.6B
+  dim: 1024                       # must match vector(1024) in backend/schema.sql
+  device: auto                    # auto | cuda | cpu
+  batch_size: 16
+
+ingest:
+  chunk_size: 500                 # tokens
+  chunk_overlap: 75
+  empty_page_ratio: 0.8           # above this share of empty pages a book counts as scanned
+
+chat:
+  top_k: 8                        # chunks sent to the LLM, closest first
+  llm:
+    base_url: https://openrouter.ai/api/v1   # OpenAI-compatible /chat/completions
+    model: openai/gpt-4o
+    api_key_env: OPENROUTER_API_KEY   # name of the variable in ../.env that holds the key
+    temperature: 0.2
+    max_tokens: 1024
+    timeout_s: 60

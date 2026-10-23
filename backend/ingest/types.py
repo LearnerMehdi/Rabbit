@@ -50,6 +50,11 @@ class UnreadablePDFError(IngestError):
     pass
 
 
+class NotPdfError(IngestError):
+    def __init__(self):
+        super().__init__("Not a PDF file")
+
+
 class NoTextLayerError(IngestError):
     def __init__(self):
         super().__init__("No text layer (scanned PDF)")

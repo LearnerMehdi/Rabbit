@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { api, ApiError, CHAT_UNAVAILABLE, type Book, type ChatAvailability } from "../api";
+import { api, ApiError, CHAT_UNAVAILABLE, type Book, type ChatAvailability, type Source } from "../api";
 import { useBookProgress } from "../lib/hooks";
 import { Icon } from "./Icon";
 
 type Msg =
   | { kind: "q"; text: string; id: number }
-  | { kind: "a"; text: string; id: number }
+  | { kind: "a"; text: string; id: number; question: string; sources: Source[] }
   | { kind: "error"; question: string; text: string; id: number };
 
 // conversations are shown while the app is open (per book) and gone after a reload;
@@ -13,7 +13,66 @@ type Msg =
 const threads = new Map<string, Msg[]>();
 let nextId = 1;
 
-export function ChatPanel({ book }: { book: Book }) {
+/** The excerpts an answer was given, as links into the book. */
+export interface SourceFocus {
+  answerId: number;
+  question: string;
+  sources: Source[];
+  /** the source being shown */
+  n: number;
+}
+
+export const pagesLabel = (s: Source) =>
+  s.pageStart === s.pageEnd ? `p. ${s.pageStart}` : `pp. ${s.pageStart}–${s.pageEnd}`;
+
+function SourceLinks({
+  sources,
+  active,
+  onOpen,
+}: {
+  sources: Source[];
+  active: number | null;
+  onOpen: (n: number) => void;
+}) {
+  if (!sources.length) return null;
+  return (
+    <div className="app-sources">
+      <div className="or-cap">Sources in the book · match with your question</div>
+      <div className="app-sources__list">
+        {sources.map((s) => {
+          const pct = Math.round(Math.max(0, s.similarity) * 100);
+          return (
+            <button
+              key={s.n}
+              type="button"
+              className={`app-source${active === s.n ? " is-active" : ""}`}
+              aria-pressed={active === s.n}
+              title={s.text.length > 280 ? `${s.text.slice(0, 280)}…` : s.text}
+              onClick={() => onOpen(s.n)}
+            >
+              <span className="app-source__n">{s.n}</span>
+              <span className="app-source__pages">{pagesLabel(s)}</span>
+              <span className="app-source__meter" aria-hidden="true">
+                <span style={{ width: `${pct}%` }} />
+              </span>
+              <span className="app-source__pct">{pct}%</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function ChatPanel({
+  book,
+  focus,
+  onOpenSource,
+}: {
+  book: Book;
+  focus: SourceFocus | null;
+  onOpenSource: (focus: SourceFocus) => void;
+}) {
   const progress = useBookProgress(book.id, book);
   const [availability, setAvailability] = useState<ChatAvailability | null>(null);
   const [messages, setMessages] = useState<Msg[]>(() => threads.get(book.id) ?? []);
@@ -46,8 +105,8 @@ export function ChatPanel({ book }: { book: Book }) {
   const ask = async (question: string) => {
     setPending(true);
     try {
-      const { answer } = await api.askQuestion(book.id, question);
-      setMessages((m) => [...m, { kind: "a", text: answer, id: nextId++ }]);
+      const { answer, sources } = await api.askQuestion(book.id, question);
+      setMessages((m) => [...m, { kind: "a", text: answer, id: nextId++, question, sources }]);
     } catch (e) {
       const text =
         e instanceof ApiError && e.code === "unavailable" ? CHAT_UNAVAILABLE : "Couldn't get an answer.";
@@ -111,6 +170,11 @@ export function ChatPanel({ book }: { book: Book }) {
                 {m.text.split(/\n{2,}/).map((para, i) => (
                   <p key={i}>{para}</p>
                 ))}
+                <SourceLinks
+                  sources={m.sources ?? []}
+                  active={focus?.answerId === m.id ? focus.n : null}
+                  onOpen={(n) => onOpenSource({ answerId: m.id, question: m.question, sources: m.sources, n })}
+                />
               </div>
             ) : (
               <div key={m.id} className="or-msg-error" role="alert">

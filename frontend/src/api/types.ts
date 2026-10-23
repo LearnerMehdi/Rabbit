@@ -42,6 +42,29 @@ export interface OpenedBook {
   file: Blob;
 }
 
+/** Where a retrieved excerpt is on one page: line boxes as fractions of the page, origin top-left. */
+export interface Highlight {
+  page: number;
+  rects: [number, number, number, number][];
+}
+
+/** One excerpt retrieved for an answer, for the UI only (the LLM never sees these). */
+export interface Source {
+  /** 1-based, closest to the question first */
+  n: number;
+  pageStart: number;
+  pageEnd: number;
+  /** cosine similarity between the question and the excerpt, 0–1 */
+  similarity: number;
+  text: string;
+  highlights: Highlight[];
+}
+
+export interface AnswerResult {
+  answer: string;
+  sources: Source[];
+}
+
 export type ChatAvailability = "available" | "unavailable";
 
 export const CHAT_UNAVAILABLE = "Chat is unavailable right now.";
@@ -66,7 +89,7 @@ export interface LibraryApi {
   updateBook(bookId: string, patch: { title?: string; author?: string | null }): Promise<Book>;
   deleteBook(bookId: string): Promise<void>;
   saveLastPage(bookId: string, page: number): Promise<void>;
-  askQuestion(bookId: string, question: string): Promise<{ answer: string }>;
+  askQuestion(bookId: string, question: string): Promise<AnswerResult>;
   getChatAvailability(): Promise<ChatAvailability>;
 
   /** progress of one book; returns an unsubscribe function */

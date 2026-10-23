@@ -1,9 +1,9 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Book } from "../api";
-import { ChatPanel } from "../components/ChatPanel";
+import { ChatPanel, pagesLabel, type SourceFocus } from "../components/ChatPanel";
 import { Icon } from "../components/Icon";
-import { PdfPages, usePageSizes, PT_TO_PX, type PdfPagesHandle } from "../components/PdfPages";
+import { PdfPages, usePageSizes, PT_TO_PX, type PageMark, type PdfPagesHandle } from "../components/PdfPages";
 import { Thumbnails } from "../components/Thumbnails";
 import { useThrottled } from "../lib/hooks";
 import { loadPdf } from "../pdf/pdf";
@@ -96,6 +96,9 @@ export function Reader({ bookId, onBack }: { bookId: string; onBack: () => void 
   const [chatWidth, setChatWidth] = usePersisted("or-chat-width", 380);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState("");
+  // the sources of one answer, highlighted in the book; optionally only their pages are shown
+  const [focus, setFocus] = useState<SourceFocus | null>(null);
+  const [onlySources, setOnlySources] = useState(false);
   const pages = useRef<PdfPagesHandle>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const restored = useRef(false);
@@ -199,6 +202,45 @@ export function Reader({ bookId, onBack }: { bookId: string; onBack: () => void 
   useEffect(() => {
     if (searchOpen) searchInput.current?.focus();
   }, [searchOpen]);
+
+  const marks = useMemo<PageMark[]>(
+    () =>
+      focus?.sources.flatMap((s) =>
+        s.highlights.map((h) => ({ page: h.page, n: s.n, rects: h.rects, active: s.n === focus.n })),
+      ) ?? [],
+    [focus],
+  );
+
+  const sourcePages = useMemo(() => {
+    if (!focus || !onlySources) return null;
+    const all = focus.sources.flatMap((s) =>
+      s.highlights.length
+        ? s.highlights.map((h) => h.page)
+        : Array.from({ length: s.pageEnd - s.pageStart + 1 }, (_, i) => s.pageStart + i),
+    );
+    return [...new Set(all)].sort((a, b) => a - b);
+  }, [focus, onlySources]);
+
+  // scroll to the shown source: the top of its first highlighted line, or its first page
+  const focusKey = focus && `${focus.answerId}:${focus.n}:${onlySources}`;
+  useEffect(() => {
+    if (!focus) return;
+    const src = focus.sources.find((s) => s.n === focus.n);
+    if (!src) return;
+    const first = src.highlights[0];
+    requestAnimationFrame(() => {
+      if (first) pages.current?.scrollToPage(first.page, Math.max(0, Math.min(...first.rects.map((r) => r[1])) - 0.02));
+      else pages.current?.scrollToPage(src.pageStart);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey]);
+
+  const stepSource = (delta: number) => {
+    if (!focus) return;
+    const count = focus.sources.length;
+    setFocus({ ...focus, n: ((focus.n - 1 + delta + count) % count) + 1 });
+  };
+  const shown = focus?.sources.find((s) => s.n === focus.n);
 
   if (error) {
     return (
@@ -404,8 +446,67 @@ export function Reader({ bookId, onBack }: { bookId: string; onBack: () => void 
           <Thumbnails doc={doc} sizes={sizes} current={page} onSelect={goTo} />
         )}
         <div className="app-reader__pages">
+          {focus && shown && (
+            <div className="app-sourcebar" role="region" aria-label="Sources">
+              <div className="app-sourcebar__what">
+                <span className="app-sourcebar__label">Sources</span>
+                <span className="app-sourcebar__question" title={focus.question}>
+                  {focus.question}
+                </span>
+              </div>
+              <div className="app-sourcebar__nav">
+                <button
+                  type="button"
+                  className="or-btn or-btn--ghost or-btn--icon"
+                  aria-label="Previous source"
+                  title="Previous source"
+                  onClick={() => stepSource(-1)}
+                >
+                  <Icon name="chevronUp" />
+                </button>
+                <span className="or-cap app-sourcebar__count" aria-live="polite">
+                  {shown.n} of {focus.sources.length} · {pagesLabel(shown)} · {Math.round(Math.max(0, shown.similarity) * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="or-btn or-btn--ghost or-btn--icon"
+                  aria-label="Next source"
+                  title="Next source"
+                  onClick={() => stepSource(1)}
+                >
+                  <Icon name="chevronDown" />
+                </button>
+              </div>
+              <label className="app-sourcebar__only">
+                <input type="checkbox" checked={onlySources} onChange={(e) => setOnlySources(e.target.checked)} />
+                Only source pages
+              </label>
+              <button
+                type="button"
+                className="or-btn or-btn--ghost or-btn--icon"
+                aria-label="Close sources"
+                title="Close sources"
+                onClick={() => {
+                  setFocus(null);
+                  setOnlySources(false);
+                }}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+          )}
           {doc && sizes.length > 0 ? (
-            <PdfPages ref={pages} doc={doc} sizes={sizes} zoom={zoom} onPageChange={onPageChange} onResize={computeFit} />
+            <PdfPages
+              ref={pages}
+              doc={doc}
+              sizes={sizes}
+              zoom={zoom}
+              onPageChange={onPageChange}
+              onResize={computeFit}
+              only={sourcePages}
+              marks={marks}
+              onMarkClick={(n) => focus && setFocus({ ...focus, n })}
+            />
           ) : (
             <div className="app-empty">
               <p className="or-cap">Opening…</p>
@@ -429,7 +530,7 @@ export function Reader({ bookId, onBack }: { bookId: string; onBack: () => void 
                 if (e.key === "ArrowRight") setChatWidth(Math.max(CHAT_MIN, chatWidth - 20));
               }}
             />
-            <ChatPanel book={book} />
+            <ChatPanel book={book} focus={focus} onOpenSource={setFocus} />
           </aside>
         )}
       </div>

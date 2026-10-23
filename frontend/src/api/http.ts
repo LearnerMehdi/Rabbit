@@ -4,6 +4,7 @@
  */
 import {
   ApiError,
+  type AnswerResult,
   type ApiErrorCode,
   type Book,
   type BookProgress,
@@ -104,7 +105,7 @@ export class HttpApi implements LibraryApi {
     return request(`/books/${bookId}/last-page`, json("PUT", { page }));
   }
 
-  askQuestion(bookId: string, question: string): Promise<{ answer: string }> {
+  askQuestion(bookId: string, question: string): Promise<AnswerResult> {
     return request(`/books/${bookId}/ask`, json("POST", { question }));
   }
 

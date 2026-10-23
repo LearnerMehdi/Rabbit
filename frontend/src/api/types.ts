@@ -3,8 +3,7 @@
  * design system's "Action annotations" table, plus small helpers the UI needs
  * (library change events, chat availability).
  *
- * Today only the mock implementation exists (src/api/mock.ts). The HTTP client
- * for the backend will implement this same interface.
+ * Implemented by the HTTP client (src/api/http.ts) for backend/api/app.py.
  */
 
 export type BookStatus = "indexing" | "ready" | "failed";
@@ -26,7 +25,7 @@ export interface Book {
   createdAt: number;
   lastOpenedAt: number | null;
   lastPage: number;
-  /** first-page thumbnail (data URL); the backend will serve this as an image URL */
+  /** first-page thumbnail URL served by the backend */
   cover: string | null;
 }
 
@@ -39,11 +38,13 @@ export interface BookProgress {
 
 export interface OpenedBook {
   book: Book;
-  /** the PDF bytes; the backend will serve a URL instead */
+  /** the PDF bytes, fetched from the backend */
   file: Blob;
 }
 
 export type ChatAvailability = "available" | "unavailable";
+
+export const CHAT_UNAVAILABLE = "Chat is unavailable right now.";
 
 export type ApiErrorCode = "not_pdf" | "duplicate" | "not_found" | "not_ready" | "unavailable" | "failed";
 

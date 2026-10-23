@@ -55,11 +55,4 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .app-chat__composer { flex: none; padding: 0 var(--space-4) var(--space-4); }
 .app-chat .or-composer__note { flex-wrap: wrap; }
 
-/* --- Dev panel (mock backend controls; not product UI) --- */
-.app-dev__toggle { position: fixed; left: var(--space-3); bottom: var(--space-3); z-index: 40; cursor: pointer; opacity: .8; }
-.app-dev__toggle:hover { opacity: 1; }
-.app-dev { position: fixed; left: var(--space-3); bottom: var(--space-3); z-index: 40; width: 280px; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--bg); border: 1px dashed var(--border-control); border-radius: var(--radius); box-shadow: var(--shadow-menu); }
-.app-dev p { margin: 0; }
-.app-dev__head { display: flex; align-items: center; justify-content: space-between; margin: -4px -8px -4px 0; }
-.app-dev__check { display: flex; align-items: center; gap: var(--space-2); }
-.app-dev select.or-input { padding-right: var(--space-2); }
+

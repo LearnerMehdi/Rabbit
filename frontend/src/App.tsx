@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { DevPanel } from "./dev/DevPanel";
 import { Library } from "./screens/Library";
 import { Reader } from "./screens/Reader";
 
@@ -24,10 +23,5 @@ export function App() {
     location.hash = "#/";
   }, []);
 
-  return (
-    <>
-      {route.bookId ? <Reader key={route.bookId} bookId={route.bookId} onBack={back} /> : <Library onOpen={open} />}
-      <DevPanel />
-    </>
-  );
+  return route.bookId ? <Reader key={route.bookId} bookId={route.bookId} onBack={back} /> : <Library onOpen={open} />;
 }

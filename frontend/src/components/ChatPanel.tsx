@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { api, ApiError, type Book, type ChatAvailability } from "../api";
-import { CHAT_UNAVAILABLE } from "../api/mock";
-import { useBookProgress, useMockSettings } from "../lib/hooks";
+import { api, ApiError, CHAT_UNAVAILABLE, type Book, type ChatAvailability } from "../api";
+import { useBookProgress } from "../lib/hooks";
 import { Icon } from "./Icon";
 
 type Msg =
@@ -9,13 +8,13 @@ type Msg =
   | { kind: "a"; text: string; id: number }
   | { kind: "error"; question: string; text: string; id: number };
 
-// conversations last while the app is open (per book), not across reloads
+// conversations are shown while the app is open (per book) and gone after a reload;
+// the backend keeps nothing and each question is answered on its own
 const threads = new Map<string, Msg[]>();
 let nextId = 1;
 
 export function ChatPanel({ book }: { book: Book }) {
   const progress = useBookProgress(book.id, book);
-  const settings = useMockSettings();
   const [availability, setAvailability] = useState<ChatAvailability | null>(null);
   const [messages, setMessages] = useState<Msg[]>(() => threads.get(book.id) ?? []);
   const [draft, setDraft] = useState("");
@@ -25,7 +24,7 @@ export function ChatPanel({ book }: { book: Book }) {
 
   useEffect(() => {
     void api.getChatAvailability().then(setAvailability);
-  }, [settings.chatMode]);
+  }, []);
 
   useEffect(() => {
     threads.set(book.id, messages);

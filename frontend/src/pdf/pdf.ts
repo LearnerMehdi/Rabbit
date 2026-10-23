@@ -1,6 +1,14 @@
 /** pdf.js helpers: everything the UI does with PDFs runs in the browser. */
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import type { PdfFacts } from "../api/mock";
+
+/** What the Add book dialog learns about a PDF before uploading it. */
+export interface PdfFacts {
+  pageCount: number;
+  encrypted: boolean;
+  /** more than 80% of sampled pages without a text layer (the backend fails these) */
+  needsOcr: boolean;
+  cover: string | null;
+}
 
 let lib: Promise<typeof import("pdfjs-dist")> | null = null;
 
@@ -26,7 +34,7 @@ export interface PdfPreview extends PdfFacts {
   author: string | null;
 }
 
-/** Page count, metadata, cover and a text-layer check, for the Add book dialog and the mock. */
+/** Page count, metadata, cover and a text-layer check, for the Add book dialog. */
 export async function inspectPdf(file: Blob): Promise<PdfPreview> {
   let doc: PDFDocumentProxy;
   try {

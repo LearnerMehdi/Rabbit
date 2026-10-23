@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type BookProgress } from "../api";
-import { getSettings, onSettings, type MockSettings } from "../api/settings";
 
 export function useBookProgress(bookId: string, initial: BookProgress): BookProgress {
   const [p, setP] = useState(initial);
@@ -10,12 +9,6 @@ export function useBookProgress(bookId: string, initial: BookProgress): BookProg
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId]);
   return p;
-}
-
-export function useMockSettings(): MockSettings {
-  const [s, setS] = useState(getSettings);
-  useEffect(() => onSettings(setS), []);
-  return s;
 }
 
 export function useDebounced<T>(value: T, ms: number): T {

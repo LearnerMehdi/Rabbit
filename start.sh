@@ -7,7 +7,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 ROOT="$PWD"
 VENV="$ROOT/../.venv"
-PY="$VENV/bin/python"
+
+# Support both Windows and Linux/macOS virtual environments
+if [[ -f "$VENV/Scripts/python.exe" ]]; then
+  PY="$VENV/Scripts/python.exe"
+else
+  PY="$VENV/bin/python"
+fi
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -20,6 +26,13 @@ step "Python environment"
 if [[ ! -x "$PY" ]]; then
   command -v uv >/dev/null || die "No venv at $VENV and uv is not installed to create one."
   uv venv "$VENV"
+
+  # Re-detect the Python executable after creating the environment
+  if [[ -f "$VENV/Scripts/python.exe" ]]; then
+    PY="$VENV/Scripts/python.exe"
+  else
+    PY="$VENV/bin/python"
+  fi
 fi
 stamp="$VENV/.orange-reader-requirements"
 want="$(cat backend/requirements.txt backend/embedder/requirements.txt | sha256sum | cut -d' ' -f1)"
